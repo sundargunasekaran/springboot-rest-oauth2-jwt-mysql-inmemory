@@ -7,9 +7,11 @@ import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.oauth2.config.annotation.web.configuration.AuthorizationServerEndpointsConfiguration;
 
 import com.oauth.example.service.CustomAuthenticationProvider;
 import com.oauth.example.service.CustomUserDetailService;
@@ -25,21 +27,22 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
    // private CustomUserDetailService customUserDetailService;
     @Autowired
 	private CustomAuthenticationProvider authenticationProvider;
-
+    
     @Override
     @Bean
     public AuthenticationManager authenticationManagerBean() throws Exception {
         return super.authenticationManagerBean();
     }
     
-    @Bean
+   /* @Bean
     public UserDetailsService userDetailsService() {
         return super.userDetailsService();
-    }
+    }*/
 
     @Autowired
     public void globalUserDetails(AuthenticationManagerBuilder auth) throws Exception {
         //auth.userDetailsService(customUserDetailService);
         auth.authenticationProvider(authenticationProvider);
     }
+
 }

@@ -20,6 +20,7 @@ import org.springframework.security.oauth2.config.annotation.web.configuration.A
 import org.springframework.security.oauth2.config.annotation.web.configuration.EnableAuthorizationServer;
 import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerEndpointsConfigurer;
 import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerSecurityConfigurer;
+import org.springframework.security.oauth2.provider.ClientDetailsService;
 import org.springframework.security.oauth2.provider.token.AuthorizationServerTokenServices;
 import org.springframework.security.oauth2.provider.token.DefaultTokenServices;
 import org.springframework.security.oauth2.provider.token.TokenStore;
@@ -29,7 +30,7 @@ import com.oauth.example.service.CustomAuthenticationProvider;
 
 @Configuration
 @EnableAuthorizationServer
-//@Order(1)
+@Order(1)
 public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdapter {
 
     private String GRANT_TYPE_PASSWORD = "password";
@@ -48,14 +49,13 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
     @Qualifier("authenticationManagerBean")
     private AuthenticationManager authenticationManager;
     
-    //@Autowired
-  //  private UserDetailsService userDetailsService;
+    @Autowired
+    private UserDetailsService userDetailsService;
+    
+    /* @Autowired
+   	private ClientDetailsService clientDetailsService;*/
 
-    @Bean
-    public TokenStore tokenStore() {
-        return new InMemoryTokenStore();
-    }
-
+    
     @Override
     public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
         clients.inMemory()
@@ -63,40 +63,101 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
                 .secret(passwordEncoder().encode(clientPass))
                 .authorizedGrantTypes(GRANT_TYPE_PASSWORD, AUTHORIZATION_CODE, REFRESH_TOKEN)
                 .scopes(SCOPE_READ, SCOPE_WRITE)
-                .accessTokenValiditySeconds(120)
-                .refreshTokenValiditySeconds(240000);
+                .accessTokenValiditySeconds(VALID_FOREVER).//Access token is only valid for 10 sec for testing.
+                refreshTokenValiditySeconds(90);
         //.redirectUris("http://localhost:8081/login")
 
     }
+    
+    @Bean
+    public TokenStore tokenStore() {
+        return new InMemoryTokenStore();
+    }
 
-    @Override
+
+   @Override
     public void configure(AuthorizationServerEndpointsConfigurer endpoints) throws Exception {
         endpoints.tokenStore(tokenStore())
-        		//.userDetailsService(userDetailsService)
+        		.userDetailsService(userDetailsService)
                 .authenticationManager(authenticationManager);
-    }
-
-    private PasswordEncoder passwordEncoder() {
-        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+        // endpoints.tokenServices(tokenServices(endpoints));
     }
     
+    
+   
+    
 /*    @Override
+    public void configure(AuthorizationServerEndpointsConfigurer endpoints) throws Exception {
+    	 endpoints.tokenServices(tokenServices(endpoints))
+    	 .authenticationManager(authenticationManager).approvalStoreDisabled();
+       
+    }
+    
+    @Override
     public void configure(AuthorizationServerSecurityConfigurer security) throws Exception {
 
         security.checkTokenAccess("permitAll()").checkTokenAccess("isAuthenticated()")
         .passwordEncoder(new BCryptPasswordEncoder());
 
     }
-    */
     
-/*    public AuthorizationServerTokenServices tokenServices(final AuthorizationServerEndpointsConfigurer endpoints) {
+    public AuthorizationServerTokenServices tokenServices(final AuthorizationServerEndpointsConfigurer endpoints) {
         final DefaultTokenServices tokenServices = new DefaultTokenServices();
-        tokenServices.setTokenStore(endpoints.getTokenStore());
+        tokenServices.setTokenStore(new InMemoryTokenStore());
         tokenServices.setClientDetailsService(endpoints.getClientDetailsService());
-        tokenServices.setTokenEnhancer(endpoints.getTokenEnhancer());
-        // ...
-        tokenServices.setAuthenticationManager(
-            (AuthenticationManager) new ProviderManager((List<AuthenticationProvider>) new CustomAuthenticationProvider()));
+       // tokenServices.setTokenEnhancer(endpoints.getTokenEnhancer());
+        tokenServices.setSupportRefreshToken(true);
+		tokenServices.setReuseRefreshToken(true);
+       // tokenServices.setAuthenticationManager(authenticationManager);
         return tokenServices;
     }*/
+   
+   //customtokenservice
+   /*@Override
+   public void configure(AuthorizationServerEndpointsConfigurer endpoints) throws Exception {
+   	 endpoints.tokenServices(this.customTokenServices())
+   	 .authenticationManager(authenticationManager);
+      
+   }
+   
+	private DefaultTokenServices customTokenServices() {
+		DefaultTokenServices tokenServices = new CustomTokenServices();
+		tokenServices.setTokenStore(new InMemoryTokenStore());
+		tokenServices.setSupportRefreshToken(true);
+		tokenServices.setReuseRefreshToken(true);
+		tokenServices.setClientDetailsService(this.clientDetailsService);
+		return tokenServices;
+	}
+   
+	private static class CustomTokenServices extends DefaultTokenServices {
+		private TokenStore tokenStore;
+
+		@Override
+		public OAuth2AccessToken refreshAccessToken(String refreshTokenValue, TokenRequest tokenRequest) throws AuthenticationException {
+			OAuth2RefreshToken refreshToken = this.tokenStore.readRefreshToken(refreshTokenValue);
+			OAuth2Authentication authentication = this.tokenStore.readAuthenticationForRefreshToken(refreshToken);
+			System.out.println("--> AA: "+authentication.getName()+""+authentication.getCredentials());
+			// Check attributes in the authentication and
+			// decide whether to grant the refresh token
+			boolean allowRefresh = true;
+
+			if (!allowRefresh) {
+				// throw UnauthorizedClientException or something similar
+
+			}
+
+			return super.refreshAccessToken(refreshTokenValue, tokenRequest);
+		}
+
+		@Override
+		public void setTokenStore(TokenStore tokenStore) {
+			super.setTokenStore(tokenStore);
+			this.tokenStore = tokenStore;
+		}
+	}*/
+    
+    private PasswordEncoder passwordEncoder() {
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+  
 }
